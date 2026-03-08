@@ -1,0 +1,82 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(STUDENT)
+  avatar    String?
+  batch     String?         // For students e.g. "2024"
+  subject   String?         // For teachers e.g. "Mathematics"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  assignmentsCreated Assignment[]  @relation("TeacherAssignments")
+  submissions        Submission[]
+
+  @@map("users")
+}
+
+model Assignment {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  subject     String
+  dueDate     DateTime
+  priority    Priority @default(MEDIUM)
+  teacherId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  teacher     User         @relation("TeacherAssignments", fields: [teacherId], references: [id], onDelete: Cascade)
+  submissions Submission[]
+
+  @@map("assignments")
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+  assignmentId String
+  studentId    String
+  status       SubmissionStatus @default(PENDING)
+  grade        String?
+  feedback     String?
+  submittedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  // Relations
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, studentId])
+  @@map("submissions")
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum SubmissionStatus {
+  PENDING
+  SUBMITTED
+  LATE
+}
